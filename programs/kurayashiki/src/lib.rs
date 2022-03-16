@@ -1,28 +1,23 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
-    token,
-    token::{TokenAccount, Mint, Token, Transfer},
+    token::{TokenAccount, Mint, Token},
     associated_token::AssociatedToken,
 };
 use solana_program::{
     pubkey,
     instruction::{Instruction, AccountMeta},
-    program_error,
 };
 use pyth_client::{
-    Product,
     Price,
     PriceStatus,
-    PriceType,
-    CorpAction,
     AccountType,
-    PROD_HDR_SIZE,
     VERSION_2,
     MAGIC,
     cast
 };
 use std::convert::TryFrom;
 use borsh::{BorshDeserialize, BorshSerialize};
+use spl_token;
 
 
 declare_id!("F3jaebcEGakVPRagMXGZ13iPSnH5XUiwW35A5LCe1eVe");
@@ -45,7 +40,7 @@ const DEPOSIT_SOL_MIN_BALANCE: u64 = 100_000_000; // 0.1 SOL (>= rent_exempt of 
 const POOL_DEPOSIT_SOL_MAX_BALANCE: u64 = 100_000_000; // 0.1 SOL
 
 const MAX_ACCEPTABLE_DIFF_LAMPORTS: u64 = 50_000; // 0.000050 SOL (network fee of TX with 10 signers)
-const MAX_ACCEPTABLE_UPDATE_INTERVAL: i64 = 60 * 60 * 48; // 48 hours
+const MAX_ACCEPTABLE_UPDATE_INTERVAL: i64 = 60 * 60 * 72; // 72 hours
 const GRACE_PERIOD: i64 = 60 * 10; // 10 minutes
 
 #[derive(BorshSerialize, BorshDeserialize, Debug)]
@@ -246,20 +241,10 @@ pub mod kurayashiki {
         Ok(())
     }
 
-    pub fn rebalance_pool(ctx: Context<RebalancePool>, index1: u32, index2: u32, index3: u32, index4: u32) -> ProgramResult {
-        msg!("rebalance_pool called");
+    pub fn collect_from_pool(ctx: Context<CollectFromPool>, index1: u32, index2: u32, index3: u32, index4: u32) -> ProgramResult {
+        msg!("collect_from_pool called");
 
         // PDA
-        let init_seeds_sol = [b"kurayashiki".as_ref(), b"nano_swap".as_ref(), b"deposit_sol".as_ref(), &ctx.accounts.creator.key().to_bytes()];
-        let (_pda_sol , bump_sol) = Pubkey::find_program_address(&init_seeds_sol, ctx.program_id);
-        let seeds_sol = [b"kurayashiki".as_ref(), b"nano_swap".as_ref(), b"deposit_sol".as_ref(), &ctx.accounts.creator.key().to_bytes(), &[bump_sol]];
-        msg!("_pda_sol: {}, bump_sol: {}", _pda_sol.to_string(), bump_sol);
-
-        let init_seeds_wsol = [b"kurayashiki".as_ref(), b"nano_swap".as_ref(), b"temporary_deposit_wsol".as_ref(), &ctx.accounts.creator.key().to_bytes()];
-        let (_pda_wsol , bump_wsol) = Pubkey::find_program_address(&init_seeds_wsol, ctx.program_id);
-        let seeds_wsol = [b"kurayashiki".as_ref(), b"nano_swap".as_ref(), b"temporary_deposit_wsol".as_ref(), &ctx.accounts.creator.key().to_bytes(), &[bump_wsol]];
-        msg!("_pda_wsol: {}, bump_wsol: {}", _pda_wsol.to_string(), bump_wsol);
-
         let index_bytes1 = index1.to_le_bytes();
         let init_seeds1 = [b"kurayashiki".as_ref(), b"nano_swap".as_ref(), b"deposit_sol".as_ref(), index_bytes1.as_ref(), &ctx.accounts.creator.key().to_bytes()];
         let (_pda1 , bump1) = Pubkey::find_program_address(&init_seeds1, ctx.program_id);
@@ -318,12 +303,129 @@ pub mod kurayashiki {
             )?;    
         }
 
+        Ok(())
+    }
+
+    pub fn distribute_to_pool(ctx: Context<DistributeToPool>, index1: u32, index2: u32, index3: u32, index4: u32) -> ProgramResult {
+        msg!("distribute_to_pool called");
+
+        // PDA
+        let init_seeds_sol = [b"kurayashiki".as_ref(), b"nano_swap".as_ref(), b"deposit_sol".as_ref(), &ctx.accounts.creator.key().to_bytes()];
+        let (_pda_sol , bump_sol) = Pubkey::find_program_address(&init_seeds_sol, ctx.program_id);
+        let seeds_sol = [b"kurayashiki".as_ref(), b"nano_swap".as_ref(), b"deposit_sol".as_ref(), &ctx.accounts.creator.key().to_bytes(), &[bump_sol]];
+        msg!("_pda_sol: {}, bump_sol: {}", _pda_sol.to_string(), bump_sol);
+
+        let index_bytes1 = index1.to_le_bytes();
+        let init_seeds1 = [b"kurayashiki".as_ref(), b"nano_swap".as_ref(), b"deposit_sol".as_ref(), index_bytes1.as_ref(), &ctx.accounts.creator.key().to_bytes()];
+        let (_pda1 , bump1) = Pubkey::find_program_address(&init_seeds1, ctx.program_id);
+        let seeds1 = [b"kurayashiki".as_ref(), b"nano_swap".as_ref(), b"deposit_sol".as_ref(), index_bytes1.as_ref(), &ctx.accounts.creator.key().to_bytes(), &[bump1]];
+        msg!("_pda1: {}, bump1: {}", _pda1.to_string(), bump1);
+
+        let index_bytes2 = index2.to_le_bytes();
+        let init_seeds2 = [b"kurayashiki".as_ref(), b"nano_swap".as_ref(), b"deposit_sol".as_ref(), index_bytes2.as_ref(), &ctx.accounts.creator.key().to_bytes()];
+        let (_pda2 , bump2) = Pubkey::find_program_address(&init_seeds2, ctx.program_id);
+        let seeds2 = [b"kurayashiki".as_ref(), b"nano_swap".as_ref(), b"deposit_sol".as_ref(), index_bytes2.as_ref(), &ctx.accounts.creator.key().to_bytes(), &[bump2]];
+        msg!("_pda2: {}, bump2: {}", _pda2.to_string(), bump2);
+
+        let index_bytes3 = index3.to_le_bytes();
+        let init_seeds3 = [b"kurayashiki".as_ref(), b"nano_swap".as_ref(), b"deposit_sol".as_ref(), index_bytes3.as_ref(), &ctx.accounts.creator.key().to_bytes()];
+        let (_pda3 , bump3) = Pubkey::find_program_address(&init_seeds3, ctx.program_id);
+        let seeds3 = [b"kurayashiki".as_ref(), b"nano_swap".as_ref(), b"deposit_sol".as_ref(), index_bytes3.as_ref(), &ctx.accounts.creator.key().to_bytes(), &[bump3]];
+        msg!("_pda3: {}, bump3: {}", _pda3.to_string(), bump3);
+
+        let index_bytes4 = index4.to_le_bytes();
+        let init_seeds4 = [b"kurayashiki".as_ref(), b"nano_swap".as_ref(), b"deposit_sol".as_ref(), index_bytes4.as_ref(), &ctx.accounts.creator.key().to_bytes()];
+        let (_pda4 , bump4) = Pubkey::find_program_address(&init_seeds4, ctx.program_id);
+        let seeds4 = [b"kurayashiki".as_ref(), b"nano_swap".as_ref(), b"deposit_sol".as_ref(), index_bytes4.as_ref(), &ctx.accounts.creator.key().to_bytes(), &[bump4]];
+        msg!("_pda4: {}, bump4: {}", _pda4.to_string(), bump4);
+
+        let pool_deposit_sols = [&ctx.accounts.pool_deposit_sol1, &ctx.accounts.pool_deposit_sol2, &ctx.accounts.pool_deposit_sol3, &ctx.accounts.pool_deposit_sol4];
+        let seeds = [seeds1, seeds2, seeds3, seeds4];
+        
+        // SOL分配
+        assert!(ctx.accounts.deposit_sol.lamports() >= DEPOSIT_SOL_MIN_BALANCE);
+        let allocatable_lamports = ctx.accounts.deposit_sol.lamports() - DEPOSIT_SOL_MIN_BALANCE;
+        msg!("allocatable_lamports: {}", allocatable_lamports);
+
+        let mut sum_lamports = allocatable_lamports;
+        for i in 0..4 {
+            sum_lamports += pool_deposit_sols[i].lamports();
+        }
+        msg!("sum_lamports: {}", sum_lamports);
+
+        // 上限は超えないように分配する
+        let rebalanced_lamports = if sum_lamports / 4 >= POOL_DEPOSIT_SOL_MAX_BALANCE { POOL_DEPOSIT_SOL_MAX_BALANCE } else { sum_lamports / 4 };
+        msg!("rebalanced_lamports: {}", rebalanced_lamports);
+
+        // 起こってはならないが、POOL_DEPOSIT_SOL_MAX_BALANCE を供給できず、先に集めて平準化するしかない場合を考慮
+        for i in 0..4 {
+            let current_lamports = pool_deposit_sols[i].lamports();
+
+            if current_lamports > rebalanced_lamports {
+                msg!("transfer sol, pool_deposit_sol to deposit_sol, {} lamports", current_lamports - rebalanced_lamports);
+                let ix = solana_program::system_instruction::transfer(
+                    &pool_deposit_sols[i].key(),
+                    &ctx.accounts.deposit_sol.key(),
+                    current_lamports - rebalanced_lamports,
+                );
+                solana_program::program::invoke_signed(
+                    &ix,
+                    &[
+                        ctx.accounts.system_program.to_account_info(),
+                        pool_deposit_sols[i].to_account_info(),
+                        ctx.accounts.deposit_sol.to_account_info(),
+                    ],
+                    &[seeds[i].as_ref()],
+                )?;
+            }
+        }
+
+        // 通常はこちらで POOL_DEPOSIT_SOL_MAX_BALANCE になるように配る
+        for i in 0..4 {
+            let current_lamports = pool_deposit_sols[i].lamports();
+
+            if current_lamports < rebalanced_lamports {
+                msg!("transfer sol, deposit_sol to pool_deposit_sol, {} lamports", rebalanced_lamports - current_lamports);
+                let ix = solana_program::system_instruction::transfer(
+                    &ctx.accounts.deposit_sol.key(),
+                    &pool_deposit_sols[i].key(),
+                    rebalanced_lamports - current_lamports,
+                );
+                solana_program::program::invoke_signed(
+                    &ix,
+                    &[
+                        ctx.accounts.system_program.to_account_info(),
+                        pool_deposit_sols[i].to_account_info(),
+                        ctx.accounts.deposit_sol.to_account_info(),
+                    ],
+                    &[seeds_sol.as_ref()],
+                )?;
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn convert_to_sol(ctx: Context<ConvertToSol>) -> ProgramResult {
+        msg!("convert_to_sol called");
+
+        // PDA
+        let init_seeds_sol = [b"kurayashiki".as_ref(), b"nano_swap".as_ref(), b"deposit_sol".as_ref(), &ctx.accounts.creator.key().to_bytes()];
+        let (_pda_sol , bump_sol) = Pubkey::find_program_address(&init_seeds_sol, ctx.program_id);
+        let seeds_sol = [b"kurayashiki".as_ref(), b"nano_swap".as_ref(), b"deposit_sol".as_ref(), &ctx.accounts.creator.key().to_bytes(), &[bump_sol]];
+        msg!("_pda_sol: {}, bump_sol: {}", _pda_sol.to_string(), bump_sol);
+
+        let init_seeds_wsol = [b"kurayashiki".as_ref(), b"nano_swap".as_ref(), b"temporary_deposit_wsol".as_ref(), &ctx.accounts.creator.key().to_bytes()];
+        let (_pda_wsol , bump_wsol) = Pubkey::find_program_address(&init_seeds_wsol, ctx.program_id);
+        let seeds_wsol = [b"kurayashiki".as_ref(), b"nano_swap".as_ref(), b"temporary_deposit_wsol".as_ref(), &ctx.accounts.creator.key().to_bytes(), &[bump_wsol]];
+        msg!("_pda_wsol: {}, bump_wsol: {}", _pda_wsol.to_string(), bump_wsol);
+
         // WSOLアカウント一時作成
-        let exempt = ctx.accounts.rent.minimum_balance(165);
+        msg!("create account");
         let create_wsol_account_ix = solana_program::system_instruction::create_account(
             &ctx.accounts.deposit_sol.key(),
             &ctx.accounts.temporary_deposit_wsol.key(),
-            exempt,
+            ctx.accounts.rent.minimum_balance(165),
             165,
             &ctx.accounts.token_program.key());
         solana_program::program::invoke_signed(
@@ -336,6 +438,7 @@ pub mod kurayashiki {
             ],
             &[seeds_sol.as_ref(), seeds_wsol.as_ref()],
         )?;
+        msg!("initialize account");
         let init_account_ix = spl_token::instruction::initialize_account(
             &ctx.accounts.token_program.key(),
             &ctx.accounts.temporary_deposit_wsol.key(),
@@ -348,11 +451,12 @@ pub mod kurayashiki {
                 ctx.accounts.temporary_deposit_wsol.to_account_info(),
                 ctx.accounts.wsol_mint.to_account_info(),
                 ctx.accounts.deposit_sol.to_account_info(),
+                ctx.accounts.rent.to_account_info(),
             ],
         )?;
 
         // ORCAスワップ実行
-        let input_usdc = usdc_amount_sum;
+        let input_usdc = ctx.accounts.deposit_usdc.amount;
         let output_wsol = get_expected_output_amount(ctx.accounts.orca_pool_usdc.amount, ctx.accounts.orca_pool_wsol.amount, input_usdc);
         msg!("swap usdc to wsol, {} mUSDC to expected {} lamports", input_usdc, output_wsol);
         let swap_ix = Instruction {
@@ -412,64 +516,6 @@ pub mod kurayashiki {
             &[&seeds_sol]
         )?;
 
-        // SOL分配
-        assert!(ctx.accounts.deposit_sol.lamports() >= DEPOSIT_SOL_MIN_BALANCE);
-        let allocatable_lamports = ctx.accounts.deposit_sol.lamports() - DEPOSIT_SOL_MIN_BALANCE;
-
-        let mut sum_lamports = allocatable_lamports;
-        for i in 0..4 {
-            sum_lamports = pool_deposit_sols[i].lamports();
-        }
-
-        // 上限は超えないように分配する
-        let rebalanced_lamports = if sum_lamports / 4 >= POOL_DEPOSIT_SOL_MAX_BALANCE { POOL_DEPOSIT_SOL_MAX_BALANCE } else { sum_lamports / 4 };
-
-        // 起こってはならないが、POOL_DEPOSIT_SOL_MAX_BALANCE を供給できず、先に集めて平準化するしかない場合を考慮
-        for i in 0..4 {
-            let current_lamports = pool_deposit_sols[i].lamports();
-
-            if current_lamports > rebalanced_lamports {
-                msg!("transfer sol, pool_deposit_sol to deposit_sol, {} lamports", current_lamports - rebalanced_lamports);
-                let ix = solana_program::system_instruction::transfer(
-                    &pool_deposit_sols[i].key(),
-                    &ctx.accounts.deposit_sol.key(),
-                    current_lamports - rebalanced_lamports,
-                );
-                solana_program::program::invoke_signed(
-                    &ix,
-                    &[
-                        ctx.accounts.system_program.to_account_info(),
-                        pool_deposit_sols[i].to_account_info(),
-                        ctx.accounts.deposit_sol.to_account_info(),
-                    ],
-                    &[seeds[i].as_ref()],
-                )?;
-            }
-        }
-
-        // 通常はこちらで POOL_DEPOSIT_SOL_MAX_BALANCE になるように配る
-        for i in 0..4 {
-            let current_lamports = pool_deposit_sols[i].lamports();
-
-            if current_lamports < rebalanced_lamports {
-                msg!("transfer sol, deposit_sol to pool_deposit_sol, {} lamports", rebalanced_lamports - current_lamports);
-                let ix = solana_program::system_instruction::transfer(
-                    &ctx.accounts.deposit_sol.key(),
-                    &pool_deposit_sols[i].key(),
-                    rebalanced_lamports - current_lamports,
-                );
-                solana_program::program::invoke_signed(
-                    &ix,
-                    &[
-                        ctx.accounts.system_program.to_account_info(),
-                        pool_deposit_sols[i].to_account_info(),
-                        ctx.accounts.deposit_sol.to_account_info(),
-                    ],
-                    &[seeds_sol.as_ref()],
-                )?;
-            }
-        }
-
         Ok(())
     }
 }
@@ -496,7 +542,6 @@ pub struct Initialize<'info> {
 #[derive(Accounts)]
 pub struct UpdatePrice<'info> {
     pub creator: SystemAccount<'info>,
-    pub executor: Signer<'info>,
 
     #[account(mut, seeds = [b"kurayashiki".as_ref(), b"nano_swap".as_ref(), b"price_info".as_ref(), &creator.key().to_bytes()], bump)]
     pub price_info: Box<Account<'info, PriceInfo>>,
@@ -525,16 +570,13 @@ pub struct CreatePool<'info> {
 
 #[derive(Accounts)]
 #[instruction(index1: u32, index2: u32, index3: u32, index4: u32)]
-pub struct RebalancePool<'info> {
+pub struct CollectFromPool<'info> {
     pub creator: SystemAccount<'info>,
-    pub executor: Signer<'info>,
 
     #[account(mut, seeds = [b"kurayashiki".as_ref(), b"nano_swap".as_ref(), b"deposit_sol".as_ref(), &creator.key().to_bytes()], bump)]
     pub deposit_sol: SystemAccount<'info>,
     #[account(mut, associated_token::mint = usdc_mint, associated_token::authority = deposit_sol)]
     pub deposit_usdc: Box<Account<'info, TokenAccount>>,
-    #[account(mut, seeds = [b"kurayashiki".as_ref(), b"nano_swap".as_ref(), b"temporary_deposit_wsol".as_ref(), &creator.key().to_bytes()], bump)]
-    pub temporary_deposit_wsol: AccountInfo<'info>,
 
     // pool accounts
     #[account(mut, seeds = [b"kurayashiki".as_ref(), b"nano_swap".as_ref(), b"deposit_sol".as_ref(), index1.to_le_bytes().as_ref(), &creator.key().to_bytes()], bump)]
@@ -553,6 +595,45 @@ pub struct RebalancePool<'info> {
     pub pool_deposit_sol4: SystemAccount<'info>,
     #[account(mut, associated_token::mint = usdc_mint, associated_token::authority = pool_deposit_sol4)]
     pub pool_deposit_usdc4: Box<Account<'info, TokenAccount>>,
+
+    // aux accounts
+    pub usdc_mint: Box<Account<'info, Mint>>,
+    pub token_program: Program<'info, Token>,
+}
+
+#[derive(Accounts)]
+#[instruction(index1: u32, index2: u32, index3: u32, index4: u32)]
+pub struct DistributeToPool<'info> {
+    pub creator: SystemAccount<'info>,
+
+    #[account(mut, seeds = [b"kurayashiki".as_ref(), b"nano_swap".as_ref(), b"deposit_sol".as_ref(), &creator.key().to_bytes()], bump)]
+    pub deposit_sol: SystemAccount<'info>,
+
+    // pool accounts
+    #[account(mut, seeds = [b"kurayashiki".as_ref(), b"nano_swap".as_ref(), b"deposit_sol".as_ref(), index1.to_le_bytes().as_ref(), &creator.key().to_bytes()], bump)]
+    pub pool_deposit_sol1: SystemAccount<'info>,
+    #[account(mut, seeds = [b"kurayashiki".as_ref(), b"nano_swap".as_ref(), b"deposit_sol".as_ref(), index2.to_le_bytes().as_ref(), &creator.key().to_bytes()], bump)]
+    pub pool_deposit_sol2: SystemAccount<'info>,
+    #[account(mut, seeds = [b"kurayashiki".as_ref(), b"nano_swap".as_ref(), b"deposit_sol".as_ref(), index3.to_le_bytes().as_ref(), &creator.key().to_bytes()], bump)]
+    pub pool_deposit_sol3: SystemAccount<'info>,
+    #[account(mut, seeds = [b"kurayashiki".as_ref(), b"nano_swap".as_ref(), b"deposit_sol".as_ref(), index4.to_le_bytes().as_ref(), &creator.key().to_bytes()], bump)]
+    pub pool_deposit_sol4: SystemAccount<'info>,
+
+    // aux accounts
+    pub system_program: Program<'info, System>,
+}
+
+
+#[derive(Accounts)]
+pub struct ConvertToSol<'info> {
+    pub creator: SystemAccount<'info>,
+
+    #[account(mut, seeds = [b"kurayashiki".as_ref(), b"nano_swap".as_ref(), b"deposit_sol".as_ref(), &creator.key().to_bytes()], bump)]
+    pub deposit_sol: SystemAccount<'info>,
+    #[account(mut, associated_token::mint = usdc_mint, associated_token::authority = deposit_sol)]
+    pub deposit_usdc: Box<Account<'info, TokenAccount>>,
+    #[account(mut, seeds = [b"kurayashiki".as_ref(), b"nano_swap".as_ref(), b"temporary_deposit_wsol".as_ref(), &creator.key().to_bytes()], bump)]
+    pub temporary_deposit_wsol: AccountInfo<'info>,
 
     // ORCA accounts
     #[account(address = ORCA_SWAP_PROGRAM_ID)]
@@ -592,6 +673,7 @@ pub struct Neutralize<'info> {
     pub user: Signer<'info>,
     #[account(mut)]
     pub user_usdc: Box<Account<'info, TokenAccount>>,
+
     // aux accounts
     pub usdc_mint: Box<Account<'info, Mint>>,
     pub system_program: Program<'info, System>,
@@ -602,7 +684,7 @@ pub struct Neutralize<'info> {
 #[account]
 pub struct PriceInfo {
     pub current_usdc_per_sol_price: u64,
-    pub current_usdc_per_sol_price_updated: i64,  // UnixTimestamp
+    pub current_usdc_per_sol_price_updated: i64,   // UnixTimestamp
     pub old_usdc_per_sol_price: u64,
     pub old_usdc_per_sol_price_grace_period: i64,  // UnixTimestamp
 }
@@ -624,7 +706,6 @@ fn get_expected_output_amount(
     output_pool_balance: u64,
     input_amount: u64,
 ) -> u64 {
-    // 64bit x 64bit があるためすべて 128bit で計算
     let ib: u128 = From::from(input_pool_balance);
     let ob: u128 = From::from(output_pool_balance);
     let ia: u128 = From::from(input_amount);

@@ -1,0 +1,581 @@
+<html>
+<head>
+    <title>KURAYASHIKI Demo</title>
+    <meta charset="utf-8" />
+
+    <style type="text/css">
+        .explorer {
+            padding-left: 5pt;
+            text-decoration: none;
+        }
+
+        .normal {
+            color: blue;
+        }
+
+        .error {
+            color: red;
+        }
+
+        .intpart {
+            text-align: right;
+            width: 4em;
+            padding: 0px;
+        }
+
+        .floatpart {
+            text-align: left;
+            padding: 0px;
+        }
+
+        .signature {
+            font-size: xx-small;
+        }
+
+        .explorer {
+            padding-left: 5pt;
+            text-decoration: none;
+        }
+
+        li {
+            margin-bottom: 3pt;
+        }
+    </style>
+
+    <!--jQuery-->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <!--@solana/web3.js-->
+    <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
+    <!--decimal.js-->
+    <script src="https://unpkg.com/decimal.js-tiny@latest/decimal.min.js"></script>
+
+    <script>
+        const SYSTEM_PROGRAM_ID = new solanaWeb3.PublicKey('11111111111111111111111111111111');
+        const TOKEN_PROGRAM_ID = new solanaWeb3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
+        const ASSOCIATED_TOKEN_PROGRAM_ID = new solanaWeb3.PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
+        const SYSVAR_RENT_PUBKEY = new solanaWeb3.PublicKey('SysvarRent111111111111111111111111111111111');
+        const SYSVAR_CLOCK_PUBKEY = new solanaWeb3.PublicKey('SysvarC1ock11111111111111111111111111111111');
+
+        const TOKEN_AIRDROP_PROGRAM_ID = new solanaWeb3.PublicKey('EZz9sdp4LGfyDMsYfGssJMxYWGBQAEBZzig51PVPgpu1');
+        const TOKEN_AIRDROP_AUTHORITY = new solanaWeb3.PublicKey('vAZxjNfyWwm1JehMKAEzQKDL2s6hSnN7wgvhjbx1Mxu');
+        const TOKEN_AIRDROP_DEPOSIT_USDC = new solanaWeb3.PublicKey('9s2wWNUDpkncY7vhnMWEcxJQMNA5cpr2z1b8spQRvXmJ');
+        const TOKEN_AIRDROP_DEPOSIT_KURA = new solanaWeb3.PublicKey('7w3EyGDWqbDFLwF4h6uUhvGHvUDWDTGxaKqRX6YW8JP6');
+        const TOKEN_AIRDROP_AIRDROP_INSTRUCTION_DATA = [0x71, 0xad, 0x24, 0xee, 0x26, 0x98, 0x16, 0x75]; // 71ad24ee26981675
+
+        const DEMO_USDC_DESTINATION = new solanaWeb3.PublicKey('EDjdnNyA1rpmqyvKCr93ntd9Rfy3c9JaacRk8UaQZYz2');
+        const DEMO_KURA_DESTINATION = new solanaWeb3.PublicKey('Do7MgwvKHA9tBASFFzdBjw4MzeVNDxwJT2tm5zAncsSd');
+
+        const USDC_MINT = new solanaWeb3.PublicKey('FMwbjM1stnTzi74LV4cS937jeSUds7mZDgcdgnJ1yBDw');
+        const KURA_MINT = new solanaWeb3.PublicKey('AbixiHWAh6W7rtj7jKqV4Lt73kZWy5usanioVZjvPoqe');
+
+        // KURAYASHIKI ---------------------------------------------------------------------------
+        const KURAYASHIKI_PROGRAM_ID = new solanaWeb3.PublicKey('F3jaebcEGakVPRagMXGZ13iPSnH5XUiwW35A5LCe1eVe');
+        const KURAYASHIKI_CREATOR = new solanaWeb3.PublicKey('r21Gamwd9DtyjHeGywsneoQYR39C1VDwrw7tWxHAwh6');
+        const KURAYASHIKI_PRICE_INFO_ACCOUNT = new solanaWeb3.PublicKey('GJEhp8oADvXLppmJZWwvJiuUL4K8jkYe6zzCXrD8wy3g');
+        const KURAYASHIKI_POOLS = [
+            {deposit_sol: new solanaWeb3.PublicKey('FFk586G9d6r5pMx3ncg75yFABWubtshjiGBT9QS9wwHw'), deposit_usdc: new solanaWeb3.PublicKey('36fjyw6w5CZyiM9acfjX23an6V6ca59ZpmUVXBDwJsEc')},
+            {deposit_sol: new solanaWeb3.PublicKey('Ajtiir4Yg9g8uT2yxwM3MZV1JzyeBGPu7azw2ZfnUgBR'), deposit_usdc: new solanaWeb3.PublicKey('6oLbFkBEqSMPGjWaxgRWqK6gbbC3kchFHipHttyxW7Ny')},
+            {deposit_sol: new solanaWeb3.PublicKey('CsCE41YE6YsHBh8PHviRx5wczGiaGAHMuJwkde4RzReJ'), deposit_usdc: new solanaWeb3.PublicKey('64bxUoJ3ek8KrrcrcB6fyXxV6zv4771M1ME3TrrsezQT')},
+            {deposit_sol: new solanaWeb3.PublicKey('DrcbG7HizPujtCiYrbs5mHQUBa9svXddbQjpb48mUKuA'), deposit_usdc: new solanaWeb3.PublicKey('AUBvvPZLBNZTjmwNLWuEJxzsgWyobKpWyAvjLn9wTMXR')},
+            {deposit_sol: new solanaWeb3.PublicKey('Dm1LUgFe41TBEkNKPm82AELuBJd9DYDhrX8yc97462PZ'), deposit_usdc: new solanaWeb3.PublicKey('619hp2zERNYFFYL5W8KpeRnGPNpKfaqbxZbooNSVTSPT')},
+            {deposit_sol: new solanaWeb3.PublicKey('HJfv3Ayfe8onMFRRjLFQB4C6TUa4yffDo9yDniViS64h'), deposit_usdc: new solanaWeb3.PublicKey('3c9JgphhGmz5vRbVnSCCvGBNmq15RK4vpjtZK9r8MDxP')},
+            {deposit_sol: new solanaWeb3.PublicKey('AouDTFVofPbBJ6nA7rQ39ZsrZeNUuVNTbopA4PL8LMgY'), deposit_usdc: new solanaWeb3.PublicKey('7hprNxeLDcvexBVU64X8Bd3QRBFdwk5SwvWY7YbSfF1Z')},
+            {deposit_sol: new solanaWeb3.PublicKey('2EMU3rpnk3bzyGXBugYXfxNxsatkigXYZRfL6RnLv3wp'), deposit_usdc: new solanaWeb3.PublicKey('6jfCqXrMYPjiRPuKv1pV1sN7523zMwC3ZWN1HVTicgUU')},
+        ];
+
+        async function getExchangeRate(connection) {
+            let res = await connection.getAccountInfo(KURAYASHIKI_PRICE_INFO_ACCOUNT);
+            let dataUint8array = res["data"];
+            let dataView = new DataView(dataUint8array.buffer);
+
+            let currentUsdcPerSolPrice = dataView.getBigUint64(8, true);
+            return currentUsdcPerSolPrice;
+        }
+
+        async function createNeutralizeInstruction(connection, wallet, usdcAccount, rate) {
+            // select pool
+            let selected = Math.floor(Math.random() * KURAYASHIKI_POOLS.length);
+            console.log("selected", selected);
+            let pool = KURAYASHIKI_POOLS[selected];
+            let poolDepositSol = pool.deposit_sol;
+            let poolDepositUsdc = pool.deposit_usdc;
+
+            // get pre tx lamports
+            let res = await connection.getParsedAccountInfo(wallet);
+            let preTxLamports = res.value.lamports;
+
+            // construct instruction data
+            //   instruction       index     price             pre_tx_lamports
+            //   e5022985c94673d4  01000000  a02dbf0900000000  58883fb105000000
+            let data = new ArrayBuffer(8 + 4 + 8 + 8);
+            let dataView = new DataView(data);
+
+            dataView.setUint32(0, 0xe5022985, false);
+            dataView.setUint32(4, 0xc94673d4, false);
+            dataView.setUint32(8, selected, true);
+            dataView.setBigUint64(12, rate, true);
+            dataView.setBigUint64(20, BigInt(preTxLamports), true);
+            console.log("data", data);
+
+            let instruction = new solanaWeb3.TransactionInstruction({
+                    programId: KURAYASHIKI_PROGRAM_ID,
+                    keys: [
+                        { pubkey: KURAYASHIKI_CREATOR, isWritable: false, isSigner: false },
+                        { pubkey: KURAYASHIKI_PRICE_INFO_ACCOUNT, isWritable: false, isSigner: false },
+                        { pubkey: poolDepositSol, isWritable: true, isSigner: false },
+                        { pubkey: poolDepositUsdc, isWritable: true, isSigner: false },
+                        { pubkey: wallet, isWritable: true, isSigner: false },
+                        { pubkey: usdcAccount, isWritable: true, isSigner: false },
+                        { pubkey: USDC_MINT, isWritable: false, isSigner: false },
+                        { pubkey: SYSTEM_PROGRAM_ID, isWritable: false, isSigner: false },
+                        { pubkey: TOKEN_PROGRAM_ID, isWritable: false, isSigner: false },
+                        { pubkey: SYSVAR_CLOCK_PUBKEY, isWritable: false, isSigner: false },
+                    ],
+                    data: new Uint8Array(data),
+                });
+            return instruction;
+        }
+        // KURAYASHIKI ---------------------------------------------------------------------------
+
+        async function send_1usdc_with_kurayashiki() { await send_1usdc(true); }
+        async function send_1usdc_without_kurayashiki() { await send_1usdc(false); }
+        async function send_5kura_with_kurayashiki() { await send_5kura(true); }
+        async function send_5kura_without_kurayashiki() { await send_5kura(false); }
+
+        async function send_1usdc(with_kurayashiki) {
+            let wallet_pubkey = get_wallet_pubkey();
+            let clnt = get_client();
+
+            let tx = new solanaWeb3.Transaction();
+
+            let ata_usdc = await get_associated_token_address(wallet_pubkey, USDC_MINT);
+            if ( with_kurayashiki ) {
+                let rate = await getExchangeRate(clnt);
+                let neutralize_instruction = await createNeutralizeInstruction(clnt, wallet_pubkey, ata_usdc, rate);
+                tx.add(neutralize_instruction);
+            }
+
+            let transfer_instruction = create_send_1usdc_instruction(wallet_pubkey, ata_usdc);
+            tx.add(transfer_instruction);
+
+            await send_transaction(clnt, wallet_pubkey, tx, "send 1 USDC" + (with_kurayashiki ? " with KURAYASHIKI" : ""));
+        }
+
+        async function send_5kura(with_kurayashiki) {
+            let wallet_pubkey = get_wallet_pubkey();
+            let clnt = get_client();
+
+            let tx = new solanaWeb3.Transaction();
+
+            let ata_usdc = await get_associated_token_address(wallet_pubkey, USDC_MINT);
+            let ata_kura = await get_associated_token_address(wallet_pubkey, KURA_MINT);
+            if ( with_kurayashiki ) {
+                let rate = await getExchangeRate(clnt);
+                let neutralize_instruction = await createNeutralizeInstruction(clnt, wallet_pubkey, ata_usdc, rate);
+                tx.add(neutralize_instruction);
+            }
+
+            let transfer_instruction = create_send_5kura_instruction(wallet_pubkey, ata_kura);
+            tx.add(transfer_instruction);
+
+            await send_transaction(clnt, wallet_pubkey, tx, "send 5 KURA" + (with_kurayashiki ? " with KURAYASHIKI": ""));
+        }
+
+        function create_send_1usdc_instruction(wallet, usdcAccount) {
+            let data = new ArrayBuffer(1 + 8 + 1);
+            let dataView = new DataView(data);
+
+            dataView.setUint8(0, 0x0c);
+            dataView.setBigUint64(1, BigInt(1000000), true);
+            dataView.setUint8(9, 0x06);
+            console.log("data", data);
+
+            let instruction = new solanaWeb3.TransactionInstruction({
+                    programId: TOKEN_PROGRAM_ID,
+                    keys: [
+                        { pubkey: usdcAccount, isWritable: true, isSigner: false },
+                        { pubkey: USDC_MINT, isWritable: false, isSigner: false },
+                        { pubkey: DEMO_USDC_DESTINATION, isWritable: true, isSigner: false },
+                        { pubkey: wallet, isWritable: false, isSigner: false },
+                        { pubkey: TOKEN_PROGRAM_ID, isWritable: false, isSigner: false },
+                    ],
+                    data: new Uint8Array(data),
+                });
+            return instruction;
+        }
+
+        function create_send_5kura_instruction(wallet, kuraAccount) {
+            let data = new ArrayBuffer(1 + 8 + 1);
+            let dataView = new DataView(data);
+
+            dataView.setUint8(0, 0x0c);
+            dataView.setBigUint64(1, BigInt(5000000), true);
+            dataView.setUint8(9, 0x06);
+            console.log("data", data);
+
+            let instruction = new solanaWeb3.TransactionInstruction({
+                    programId: TOKEN_PROGRAM_ID,
+                    keys: [
+                        { pubkey: kuraAccount, isWritable: true, isSigner: false },
+                        { pubkey: KURA_MINT, isWritable: false, isSigner: false },
+                        { pubkey: DEMO_KURA_DESTINATION, isWritable: true, isSigner: false },
+                        { pubkey: wallet, isWritable: false, isSigner: false },
+                        { pubkey: TOKEN_PROGRAM_ID, isWritable: false, isSigner: false },
+                    ],
+                    data: new Uint8Array(data),
+                });
+            return instruction;
+        }
+
+        async function send_transaction(clnt, wallet_pubkey, tx, msg) {
+            try {
+                tx.recentBlockhash = (await clnt.getRecentBlockhash()).blockhash;
+                tx.feePayer = wallet_pubkey;
+                console.log(tx);
+
+                set_message(`${msg} requested...`);
+                clear_tx_signature();
+
+                let signed = await window.solana.signTransaction(tx);
+                console.log(signed);
+                let signature = await clnt.sendRawTransaction(signed.serialize(), { skipPreflight: true });
+                console.log(signature);
+                set_tx_signature(signature);
+
+                set_message(`${msg} confirm...`);
+                await clnt.confirmTransaction(signature);
+
+                await update_balance();
+                set_message(`${msg} done.`);
+            } catch (e) {
+                set_error(e);
+            }
+        }
+
+        function get_client() {
+            return new solanaWeb3.Connection(solanaWeb3.clusterApiUrl("devnet"), 'confirmed');
+        }
+
+        // ウォレット接続してから f を実行 (接続済みの場合はそのまま f 実行される)
+        async function connect_wallet_then(f) {
+            window.solana.connect()
+            .then(async function ({publicKey}) {
+                set_wallet_address(window.solana.publicKey);
+                set_message("wallet connected.");
+                await f();
+            })
+            .catch(function (e) {
+                set_error(`code: ${e.code} message: ${e.message}`);
+                console.log(e);
+            });
+        }
+
+        function get_wallet_pubkey() {
+            return window.solana.publicKey;
+        }
+
+        async function get_associated_token_address(owner, mint) {
+            let [key, ] = await solanaWeb3.PublicKey.findProgramAddress(
+                [owner.toBytes(), TOKEN_PROGRAM_ID.toBytes(), mint.toBytes()],
+                ASSOCIATED_TOKEN_PROGRAM_ID);
+            return key;
+        }
+
+        async function update_balance() {
+            set_message("update wallet balance...");
+
+            try {
+                let wallet_pubkey = get_wallet_pubkey();
+                let clnt = get_client();
+
+                // get SOL balance
+                let parsed_account_info = await clnt.getParsedAccountInfo(wallet_pubkey);
+                // get SPL balance
+                let parsed_token_accounts = await clnt.getParsedTokenAccountsByOwner(
+                    wallet_pubkey,
+                    { programId: TOKEN_PROGRAM_ID });
+                set_balance(parsed_account_info, parsed_token_accounts);
+
+                set_message("update wallet balance done.");
+            } catch (e) {
+                set_error(e);
+            }
+        }
+
+        async function airdrop_sol() {
+            try {
+                let wallet_pubkey = get_wallet_pubkey();
+                let clnt = get_client();
+
+                set_message("airdrop SOL requested...");
+                clear_tx_signature();
+
+                const tx = await clnt.requestAirdrop(wallet_pubkey, 1000000000 /* lamports = 1 SOL */);
+                set_tx_signature(tx);
+                await clnt.confirmTransaction(tx);
+
+                await update_balance();
+                set_message("airdrop SOL done.");
+            } catch (e) {
+                set_error(e);
+            }
+        }
+
+        async function airdrop_tokens() {
+            let wallet_pubkey = get_wallet_pubkey();
+            console.log("wallet_pubkey", wallet_pubkey);
+            let clnt = get_client();
+
+            let ata_usdc = await get_associated_token_address(wallet_pubkey, USDC_MINT);
+            let ata_kura = await get_associated_token_address(wallet_pubkey, KURA_MINT);
+
+            console.log("ata_usdc", ata_usdc.toBase58());
+            console.log("ata_kura", ata_kura.toBase58());
+
+            let ata_usdc_account_info = await clnt.getParsedAccountInfo(ata_usdc);
+            let ata_kura_account_info = await clnt.getParsedAccountInfo(ata_kura);
+            console.log(ata_usdc_account_info);
+            console.log(ata_kura_account_info);
+
+            let tx = new solanaWeb3.Transaction();
+
+            // create ATA for USDC
+            if ( ata_usdc_account_info.value === null ) {
+                let instruction = new solanaWeb3.TransactionInstruction({
+                    programId: ASSOCIATED_TOKEN_PROGRAM_ID,
+                    keys: [
+                        { pubkey: wallet_pubkey, isWritable: true, isSigner: true },
+                        { pubkey: ata_usdc, isWritable: true, isSigner: false },
+                        { pubkey: wallet_pubkey, isWritable: false, isSigner: false },
+                        { pubkey: USDC_MINT, isWritable: false, isSigner: false },
+                        { pubkey: SYSTEM_PROGRAM_ID, isWritable: false, isSigner: false },
+                        { pubkey: TOKEN_PROGRAM_ID, isWritable: false, isSigner: false },
+                        { pubkey: SYSVAR_RENT_PUBKEY, isWritable: false, isSigner: false },
+                    ],
+                    data: '',
+                });
+                tx.add(instruction);
+            }
+
+            // create ATA for KURA
+            if ( ata_kura_account_info.value === null ) {
+                let instruction = new solanaWeb3.TransactionInstruction({
+                    programId: ASSOCIATED_TOKEN_PROGRAM_ID,
+                    keys: [
+                        { pubkey: wallet_pubkey, isWritable: true, isSigner: true },
+                        { pubkey: ata_kura, isWritable: true, isSigner: false },
+                        { pubkey: wallet_pubkey, isWritable: false, isSigner: false },
+                        { pubkey: KURA_MINT, isWritable: false, isSigner: false },
+                        { pubkey: SYSTEM_PROGRAM_ID, isWritable: false, isSigner: false },
+                        { pubkey: TOKEN_PROGRAM_ID, isWritable: false, isSigner: false },
+                        { pubkey: SYSVAR_RENT_PUBKEY, isWritable: false, isSigner: false },
+                    ],
+                    data: '',
+                });
+                tx.add(instruction);
+            }
+
+            // airdrop
+            let instruction = new solanaWeb3.TransactionInstruction({
+                programId: TOKEN_AIRDROP_PROGRAM_ID,
+                keys: [
+                    { pubkey: TOKEN_AIRDROP_AUTHORITY, isWritable: false, isSigner: false },
+                    { pubkey: TOKEN_AIRDROP_DEPOSIT_USDC, isWritable: true, isSigner: false },
+                    { pubkey: TOKEN_AIRDROP_DEPOSIT_KURA, isWritable: true, isSigner: false },
+                    { pubkey: ata_usdc, isWritable: true, isSigner: false },
+                    { pubkey: ata_kura, isWritable: true, isSigner: false },
+                    { pubkey: USDC_MINT, isWritable: false, isSigner: false },
+                    { pubkey: KURA_MINT, isWritable: false, isSigner: false },
+                    { pubkey: TOKEN_PROGRAM_ID, isWritable: false, isSigner: false },
+                ],
+                data: TOKEN_AIRDROP_AIRDROP_INSTRUCTION_DATA,
+            });
+            tx.add(instruction);
+
+            await send_transaction(clnt, wallet_pubkey, tx, "airdrop tokens");
+        }
+
+        function set_wallet_address(pubkey) {
+            let addr = pubkey.toBase58();
+            let addr_short = addr.slice(0, 4) + "..." + addr.slice(-4);
+            $("#wallet_pubkey").text(addr_short);
+        }
+
+        function set_message(msg) {
+            $("#msg").text(msg);
+            $("#msg").attr("class", "normal");
+        }
+
+        function set_error(e) {
+            $("#msg").text("Error: " + e);
+            $("#msg").attr("class", "error");
+        }
+
+        function clear_tx_signature() {
+            $("#tx_signature").html("&nbsp;");
+        }
+
+        function set_tx_signature(signature) {
+            let explorer_url = "https://explorer.solana.com/tx/"
+                             + signature
+                             + "?cluster=devnet";
+            let solscan_url = "https://solscan.io/tx/"
+                            + signature
+                            + "?cluster=devnet"
+
+            let html = "Tx: "
+                     + signature
+                     + ` <a class="explorer" href="${solscan_url}" target="_blank" title="Solscan">🔍</a>`
+                     + ` <a class="explorer" href="${explorer_url}" target="_blank" title="Solana Explorer">🔍</a>`
+
+            $("#tx_signature").html(html);
+        }
+
+        let prev_balance_sol = null;
+        let prev_balance_usdc = null;
+        let prev_balance_kura = null;
+
+        function set_balance(parsed_account_info, parsed_token_accounts) {
+            // JSON / value / lamports
+            console.log(parsed_account_info);
+            // JSON / value[i] / {pubkey: PublicKey, account: { lamports, owner: PublicKey, data: {parsed: {info: { mint: base58, owner: base58, tokenAmount: {amount:string, decimals:number, uiAmount:number, uiAmountString: string}}}}  } }
+            // value.N.account.data.parsed.info.{mint, tokenAmount.uiAmountString}
+            console.log(parsed_token_accounts);
+
+            let balance_sol = new Decimal(parsed_account_info.value.lamports).div("1000000000");
+            let balance_usdc = new Decimal(0);
+            let balance_kura = new Decimal(0);
+            
+            let value = parsed_token_accounts.value;
+            for (let i=0; i<value.length; i++) {
+                let token_account = value[i].account.data.parsed.info;
+                console.log(token_account.mint, token_account.tokenAmount.uiAmountString);
+
+                let mint = token_account.mint;
+                let ui_amount = token_account.tokenAmount.uiAmountString;
+
+                if ( mint === USDC_MINT.toBase58() ) balance_usdc = new Decimal(ui_amount);
+                if ( mint === KURA_MINT.toBase58() ) balance_kura = new Decimal(ui_amount);
+            }
+
+            set_balance_string($('#balance_sol_int'), $('#balance_sol_float'), balance_sol);
+            set_balance_string($('#balance_usdc_int'), $('#balance_usdc_float'), balance_usdc);
+            set_balance_string($('#balance_kura_int'), $('#balance_kura_float'), balance_kura);
+
+            if ( prev_balance_sol !== null )
+                set_balance_string($('#diff_balance_sol_int'), $('#diff_balance_sol_float'), balance_sol.sub(prev_balance_sol));
+            if ( prev_balance_usdc !== null )
+                set_balance_string($('#diff_balance_usdc_int'), $('#diff_balance_usdc_float'), balance_usdc.sub(prev_balance_usdc));
+            if ( prev_balance_kura !== null )
+                set_balance_string($('#diff_balance_kura_int'), $('#diff_balance_kura_float'), balance_kura.sub(prev_balance_kura));
+
+            prev_balance_sol = balance_sol;
+            prev_balance_usdc = balance_usdc;
+            prev_balance_kura = balance_kura;
+        }
+
+        function set_balance_string(intpart, floatpart, balance) {
+            let balance_string = balance.toString();
+
+            if ( balance_string.indexOf('.') === -1 ) balance_string = balance_string + ".";
+
+            let intdigits = balance_string.slice(0, balance_string.indexOf('.'));
+            let floatdigits = balance_string.slice(balance_string.indexOf('.') + 1);
+            if ( floatdigits === "" ) floatdigits = "0";
+
+            console.log(balance, intdigits, floatdigits);
+            intpart.text(intdigits);
+            floatpart.text("." + floatdigits);
+        }
+    </script>
+</head>
+<body>
+
+<h1>
+    <a href="https://kurayashiki.jimdosite.com/" style="text-decoration: none;">
+    <img src="kurayashiki_logo_mini.png" style="vertical-align: middle;" />
+    </a>
+    KURAYASHIKI Demo</h1>
+
+<h3>Requirement</h3>
+<ul>
+    <li>Network is Devnet</li>
+    <li>Phantom wallet is required</li>
+</ul>
+
+<h3>Demo Instruction</h3>
+<ol>
+    <li>click "Connect Phantom wallet" to connect wallet.</li>
+    <li>click "Airdrop SOL" if your balance of SOL is less than 1 SOL.</li>
+    <li>click "Airdrop tokens" to get a little USDC and KURA tokens.</li>
+    <li>click "Send 1 USDC" to send 1 USDC, then check Pre/Post Tx difference.</li>
+    <li>click "Send 1 USDC with KURAYASHIKI" to send 1 USDC again, then check Pre/Post Tx difference.</li>
+    <li>click "Send 5 KURA" to send 5 KURA, then check Pre/Post Tx difference.</li>
+    <li>click "Send 5 KURA with KURAYASHIKI" to send 5 KURA again, then check Pre/Post Tx difference.</li>
+</ol>
+&#x1f4dd; check Tx log on Solscan or Solana Explorer if needed.
+
+<hr>
+
+<h3>Operations</h3>
+<p>
+    <button onclick="connect_wallet_then(update_balance)">Connect Phantom wallet</button>
+    <button onclick="connect_wallet_then(airdrop_sol)">Airdrop SOL</button>
+    <button onclick="connect_wallet_then(airdrop_tokens)">Airdrop tokens</button>
+    <button onclick="connect_wallet_then(update_balance)">Update balance</button>
+</p>
+<h5>send USDC token</h5>
+<p>
+    <button onclick="connect_wallet_then(send_1usdc_without_kurayashiki)">Send 1 USDC</button>
+    <button onclick="connect_wallet_then(send_1usdc_with_kurayashiki)">Send 1 USDC with KURAYASHIKI</button>
+</p>
+<h5>send KURA token</h5>
+<p>
+    <button onclick="connect_wallet_then(send_5kura_without_kurayashiki)">Send 5 KURA</button>
+    <button onclick="connect_wallet_then(send_5kura_with_kurayashiki)">Send 5 KURA with KURAYASHIKI</button>
+</p>
+
+<div id="msg">&nbsp;</div>
+<div class="signature" id="tx_signature">&nbsp;</div>
+
+<h3>Wallet balance</h3>
+<div>PublicKey: <span id="wallet_pubkey">not connected</span></div>
+<table border="1">
+    <thead>
+        <tr><th>SOL / Token</th><th>Balance</th><th>Pre/Post Tx difference</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>SOL</td>
+            <td><table border="0"><tr>
+                <td class="intpart" id="balance_sol_int">&nbsp;</td>
+                <td class="floatpart" id="balance_sol_float">&nbsp;</td>
+            </tr></table></td>
+            <td><table border="0"><tr>
+                <td class="intpart" id="diff_balance_sol_int">&nbsp;</td>
+                <td class="floatpart" id="diff_balance_sol_float">&nbsp;</td>
+            </tr></table></td>
+        </tr>
+        <tr><td>USDC</td>
+            <td><table border="0"><tr>
+                <td class="intpart" id="balance_usdc_int">&nbsp;</td>
+                <td class="floatpart" id="balance_usdc_float">&nbsp;</td>
+            </tr></table></td>
+            <td><table border="0"><tr>
+                <td class="intpart" id="diff_balance_usdc_int">&nbsp;</td>
+                <td class="floatpart" id="diff_balance_usdc_float">&nbsp;</td>
+            </tr></table></td>
+        </tr>
+        <tr><td>KURA</td>
+            <td><table border="0"><tr>
+                <td class="intpart" id="balance_kura_int">&nbsp;</td>
+                <td class="floatpart" id="balance_kura_float">&nbsp;</td>
+            </tr></table></td>
+            <td><table border="0"><tr>
+                <td class="intpart" id="diff_balance_kura_int">&nbsp;</td>
+                <td class="floatpart" id="diff_balance_kura_float">&nbsp;</td>
+            </tr></table></td>
+        </tr>
+    </tbody>
+</table>
+</body>
+</html>

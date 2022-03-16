@@ -134,7 +134,7 @@ async function update_price() {
   const ix = program.instruction.updatePrice({
       accounts: {
           creator: wallet.publicKey,
-          executor: wallet.publicKey,
+          //executor: wallet.publicKey,
           priceInfo: price_info,
           pythSolUsdcPrice: pyth_sol_usdc_price,
           clock: SYSVAR_CLOCK_PUBKEY,
@@ -253,7 +253,7 @@ async function neutralize(index) {
   await connection.confirmTransaction(tx, commitment);
 }
 
-async function rebalance_pool() {
+async function collect_from_pool() {
   const index1 = 0;
   const index2 = 1;
   const index3 = 2;
@@ -268,14 +268,13 @@ async function rebalance_pool() {
   console.log("pool_deposit_usdcs", pool_deposit_usdc1.toBase58(), pool_deposit_usdc2.toBase58(), pool_deposit_usdc3.toBase58(), pool_deposit_usdc4.toBase58());
 
   const transaction = new Transaction();
-  const ix = program.instruction.rebalancePool(
+  const ix = program.instruction.collectFromPool(
       index1, index2, index3, index4, {
       accounts: {
           creator: wallet.publicKey,
-          executor: wallet.publicKey,
+          //executor: wallet.publicKey,
           depositSol: deposit_sol,
           depositUsdc: deposit_usdc,
-          temporaryDepositWsol: temporary_deposit_wsol,
 
           poolDepositSol1: pool_deposit_sol1,
           poolDepositUsdc1: pool_deposit_usdc1,          
@@ -285,6 +284,74 @@ async function rebalance_pool() {
           poolDepositUsdc3: pool_deposit_usdc3,          
           poolDepositSol4: pool_deposit_sol4,
           poolDepositUsdc4: pool_deposit_usdc4,          
+
+          usdcMint: devusdc_mint,
+          tokenProgram: TOKEN_PROGRAM_ID,
+      },
+      signers: [wallet],
+  });
+  transaction.add(ix);
+
+  // 実行
+  const tx = await connection.sendTransaction(
+      transaction,
+      [wallet],
+  );
+  console.log("\ttx signature", tx);
+  await connection.confirmTransaction(tx, commitment);
+}
+
+async function distribute_to_pool() {
+  const index1 = 0;
+  const index2 = 1;
+  const index3 = 2;
+  const index4 = 3;
+
+  const [pool_deposit_sol1, pool_deposit_usdc1] = await get_pool_deposit_address(index1);
+  const [pool_deposit_sol2, pool_deposit_usdc2] = await get_pool_deposit_address(index2);
+  const [pool_deposit_sol3, pool_deposit_usdc3] = await get_pool_deposit_address(index3);
+  const [pool_deposit_sol4, pool_deposit_usdc4] = await get_pool_deposit_address(index4);
+
+  console.log("pool_deposit_sols", pool_deposit_sol1.toBase58(), pool_deposit_sol2.toBase58(), pool_deposit_sol3.toBase58(), pool_deposit_sol4.toBase58());
+  console.log("pool_deposit_usdcs", pool_deposit_usdc1.toBase58(), pool_deposit_usdc2.toBase58(), pool_deposit_usdc3.toBase58(), pool_deposit_usdc4.toBase58());
+
+  const transaction = new Transaction();
+  const ix = program.instruction.distributeToPool(
+      index1, index2, index3, index4, {
+      accounts: {
+          creator: wallet.publicKey,
+          //executor: wallet.publicKey,
+          depositSol: deposit_sol,
+
+          poolDepositSol1: pool_deposit_sol1,
+          poolDepositSol2: pool_deposit_sol2,
+          poolDepositSol3: pool_deposit_sol3,
+          poolDepositSol4: pool_deposit_sol4,
+
+          systemProgram: SystemProgram.programId,
+      },
+      signers: [wallet],
+  });
+  transaction.add(ix);
+
+  // 実行
+  const tx = await connection.sendTransaction(
+      transaction,
+      [wallet],
+  );
+  console.log("\ttx signature", tx);
+  await connection.confirmTransaction(tx, commitment);
+}
+
+async function convert_to_sol() {
+  const transaction = new Transaction();
+  const ix = program.instruction.convertToSol({
+      accounts: {
+          creator: wallet.publicKey,
+          //executor: wallet.publicKey,
+          depositSol: deposit_sol,
+          depositUsdc: deposit_usdc,
+          temporaryDepositWsol: temporary_deposit_wsol,
 
           orcaSwapProgram: ORCA_TOKEN_SWAP_ID_DEVNET,
           orcaAddress: orca_address,
@@ -312,8 +379,8 @@ async function rebalance_pool() {
   );
   console.log("\ttx signature", tx);
   await connection.confirmTransaction(tx, commitment);
-
 }
+
 
 /*
 async function swap() {
@@ -511,15 +578,33 @@ async function main() {
     //await create_pool(1);
     //await create_pool(2);
     //await create_pool(3);
+    //await create_pool(4);
+    //await create_pool(5);
+    //await create_pool(6);
+    //await create_pool(7);
     // 0: https://solscan.io/tx/38TxgYQX9hoQp5PXZfm7tS8uZ2aUhqT9mktSpnnDZuMkG26rCFdnYWUN74SRQ633KieYnSicitXqYL13H7yDUCcH?cluster=devnet
     // 1: https://solscan.io/tx/9EdyqbSJZ1YVwbfVCcYJdAY5eit2f1WFeCrkc8GKnRj7G6TmLG1VTiCVkJiwEQ3aRr73U8KvPJiBRyFmbHACFZ8?cluster=devnet
     // 2: https://solscan.io/tx/2g9m7PHd9bFK2hd4HJrPtnL5JkgW5HoH8EgXZv2GjNNicyzRqDsut9BiSZaDzZsyxr8terWsZehMCfm6oN3CfzSw?cluster=devnet
     // 3: https://solscan.io/tx/3aBMF6i9W2cCqZDTmQRfwQFcWgqEjiHPgMeEj3e67Ghv2GS5zXoXoBQufAas21pAYWDxGzhGHWqYVJfEHxCuyZgH?cluster=devnet
+    // 4: https://solscan.io/tx/Q4xFeD6TVMB6d9C1ytqUXuvpAdruaUFcH4SYothiS3hzdmdNzciRCe95e8hmJatGZJ8jPWGQsYQ2WF1TShFBvbh?cluster=devnet
+    // 5: https://solscan.io/tx/rFnRvTETbW5mXnSUBz5LngQ8C6Met6MMsW1TZ5F3sjC1BiMCiyHE3x5JfRQzw3DQW4MwoWTZddJaUVAbSy1572W?cluster=devnet
+    // 6: https://solscan.io/tx/3wt8fTq6WzTPSXGeejtWPN4HtFE3f9856YP3apaA56GpCuTYeLRDox2bA7hADmpK7J76UBEeX1UuEb7FVkxJ74sd?cluster=devnet
+    // 7: https://solscan.io/tx/bkJSnXsEo1igqW1hBeLZuA6rbZfQS3X3EUCJVQ2guAimLsQsMnUCaanwVCDMZjmgBxHafYPN2bAwQZsYyM1xSXa?cluster=devnet
 
-    // await neutralize(1);
+    await neutralize(1);
+
+    //await collect_from_pool();
+    // https://solscan.io/tx/3jHAy9FVJXX7SvqaXVk93xM9uyeBJVErp42fgDX5oyzeMtLngKyth7vfA3nUAK68h2r8mUwVfKFmoYxjNaXyt9gT?cluster=devnet
+    //await convert_to_sol();
+    // https://solscan.io/tx/3s732sQ673711vdXktmwS73n2rXpsFvSThTiXSx7DTjRVnqvcz3vsLb5obfwkjervSmMrZcMPR4Gd4LZGvtScnY9?cluster=devnet
+    //await distribute_to_pool();
+    // https://solscan.io/tx/39oubv32d4SVtN6e2p41ALSEyCY6akiGNEWxpGX3G1PgtrxmJk3gxTiRgJHAy5ScRrixEVoP8PDZgGE9N8DuXHh5?cluster=devnet
 
 
-    await rebalance_pool();
+    for (let i=0; i<8; i++) {
+        let [sol, usdc] = await get_pool_deposit_address(i);
+        console.log(i, sol.toBase58(), usdc.toBase58()); 
+    }
 
 }
 
